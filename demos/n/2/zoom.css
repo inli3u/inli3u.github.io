@@ -1,0 +1,54 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  font-size: 20px;
+}
+
+article {
+  background: #888;
+}
+
+section {
+  position: relative;
+  min-height: 100vh;
+  border-bottom: 1px solid transparent;
+}
+
+article:not(.scrolling) section {
+  border-bottom: 1px dotted #888;
+}
+
+section > .bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  transition: transform 200ms ease-in-out;
+}
+
+section > .content {
+  position: relative;
+  transition: transform 200ms ease-in-out;
+}
+
+article.scrolling > section {
+  /* transform: scale(0.9); */
+  /* border: 20px solid #333; */
+  /* margin: 20px; */
+}
+
+article.scrolling > section > .content {
+  transform: scale(0.9);
+}
+
+article.scrolling > section > .bg {
+  transform: scale(0.8, 0.95);
+  box-shadow: 0px 10px 80px rgba(0, 0, 0, 0.5), 0px 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+section > .content {
+  padding: 1em 10em;
+}
