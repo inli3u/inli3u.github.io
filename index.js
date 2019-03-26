@@ -1,38 +1,108 @@
 'use strict';
 
+// "state"...
+let unsortedArray = [];
+let sortLog = [];
+
+let arraySize = 20;
+
+
 function main() {
-  document.addEventListener('DOMContentLoaded', function () {
-    generate();
-    document.body.addEventListener('click', (e) => generate());
-    document.body.addEventListener('keypress', (e) => generate());
-  });
+  document.addEventListener('DOMContentLoaded', handleReady);
 }
 
-function generate() {
+
+
+/*** Event handlers ***/
+
+function handleReady(e) {
+  window.addEventListener('resize', handleResize);
+  document.getElementById('algo').addEventListener('change', handleAlgoChange);
+  document.getElementById('array-size').addEventListener('change', handleArraySizeChange);
+  document.getElementById('max-line-count').addEventListener('change', handleMaxLineCount);
+  document.getElementById('height').addEventListener('change', handleHeightChange);
+  document.getElementById('generate').addEventListener('click', handleRandomizeClick);
+
+  //initKnob(document.getElementById('array-size-outer'));
+
+  unsortedArray = resizeRandomArray(unsortedArray, getArraySize());
+  sortLog = sortArray(unsortedArray);
+  draw(sortLog);
+}
+
+function handleResize(e) {
+  draw(sortLog);
+}
+
+function handleAlgoChange(e) {
+  sortLog = sortArray(unsortedArray);
+  draw(sortLog);
+}
+
+function handleArraySizeChange(e) {
+  unsortedArray = resizeRandomArray(unsortedArray, getArraySize());
+  sortLog = sortArray(unsortedArray);
+  draw(sortLog)
+}
+
+function handleMaxLineCount(e) {
+  draw(sortLog);
+}
+
+function handleHeightChange(e) {
+  draw(sortLog);
+}
+
+function handleRandomizeClick(e) {
+  // Generate new random array
+  unsortedArray = resizeRandomArray([], getArraySize());
+  sortLog = sortArray(unsortedArray);
+  draw(sortLog);
+}
+
+function setArraySize(n) {
+  if (n > 100) n = 100;
+  if (n < 2) n = 2;
+  arraySize = n;
+}
+
+/*** Input ***/
+
+function getAlgo() {
+  return document.getElementById('algo').value;
+}
+
+function getArraySize() {
+  //return arraySize;
+  return parseInt(document.getElementById('array-size').value, 10);
+}
+
+function getMaxLineCount() {
+  return parseInt(document.getElementById('max-line-count').value, 10);
+}
+
+function getHeight() {
+  return parseInt(document.getElementById('height').value, 10) / 100;
+}
+
+
+
+/*** Drawing functions ***/
+
+function draw(sortLog) {
   let canvas = document.querySelector('canvas');
   canvas.width = window.innerWidth * window.devicePixelRatio;
   canvas.height = window.innerHeight * window.devicePixelRatio;
   let ctx = canvas.getContext('2d');
 
+  let lines = pointsFromRows(sample(sortLog, getMaxLineCount()), canvas.width, canvas.height);
 
-  let random = randomArray(20);
-  let rows = [];
-  quicksort(random, (list) => rows.push(list));
-  //renderFilled(rows);
-  let transformed = rows.map((row, i) => pointsFromRow(row, rows.length, i, canvas.width, canvas.height));
+  //let distance = mouseX * 2 - window.innerWidth;
+  //let linesParallax = parallax(lines, distance, 1);
+  let linesParallax = lines; //parallaxPerspective(lines, distance, canvas.width);
 
-  //drawStroked(ctx, transformed, makeLinearPath);
-  //drawStroked(ctx, transformed, makeBezierPath);
-  drawFilled2(ctx, transformed, makeBezierPath);
-  //drawFilled1(ctx, transformed, makeBezierPath);
-
+  drawFilledFlat(ctx, linesParallax, makeBezierPath);
 }
-
-
-
-/**
- * Renderer
- */
 
 function drawStroked(ctx, all, pathFunc) {
   for (let i = 0; i < all.length; i++) {
@@ -46,7 +116,7 @@ function drawStroked(ctx, all, pathFunc) {
   }
 }
 
-function drawFilled1(ctx, all, pathFunc) {
+function drawFilledDepth(ctx, all, pathFunc) {
   let canvas = document.querySelector('canvas');
   let c = 30;
   ctx.fillStyle = rgba(c, c, c, 1);
@@ -56,7 +126,7 @@ function drawFilled1(ctx, all, pathFunc) {
     let row = all[i];
 
     pathFunc(ctx, row);
-    closePath(ctx, canvas.width, canvas.height);
+    closePath(row, ctx, canvas.width, canvas.height);
 
     let depth = i / all.length;
     let color = ((depth) * 0.7 + 0.2) * 255; // values from 0.2 to 0.95, dark gray to off white
@@ -65,9 +135,8 @@ function drawFilled1(ctx, all, pathFunc) {
   }
 }
 
-function drawFilled2(ctx, all, pathFunc) {
+function drawFilledFlat(ctx, all, pathFunc) {
   let canvas = document.querySelector('canvas');
-  let c = 200;
   ctx.fillStyle = 'transparent';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -75,15 +144,14 @@ function drawFilled2(ctx, all, pathFunc) {
     let row = all[i];
 
     pathFunc(ctx, row);
-    closePath(ctx, canvas.width, canvas.height);
+    closePath(row, ctx, canvas.width, canvas.height);
 
-    let depth = i / all.length;
     let color = 255;
     ctx.fillStyle = rgba(color, color, color, 1);
     ctx.fill();
 
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-    ctx.lineWidth = i / all.length * 4 + 2;
+    ctx.lineWidth = i / all.length * 2 * window.devicePixelRatio + 2;
     ctx.stroke();
   }
 
@@ -92,16 +160,82 @@ function drawFilled2(ctx, all, pathFunc) {
   // ctx.fill();
 }
 
-function pointsFromRow(row, rowsLength, y, width, height) {
-  const stepX = width / (row.length - 1);
-  const stepY = stepX * 5;
-  const yspace = (height - stepY) / rowsLength;
-  let offsetY = y * yspace;
+function pointsFromRows(rows, canvasWidth, canvasHeight) {
+  // 2 = 3 / 4
+  // 3 = 4 / 6
+  let rowHeight = (rows.length + 1) / (rows.length * 2) * canvasHeight;
 
-  return row.map((v, i) => {
-    let nx = i * stepX;
-    let ny = offsetY + (1 - v) * stepY;
-    return {x: nx, y: ny};
+  return rows.map((row, rowIndex) => {
+    const stepX = canvasWidth / (row.length - 1);
+
+    // 2 = 1 / 4
+    // 3 = 1 / 6
+    let rowOffsetY = rowIndex / (rows.length * 2) * canvasHeight;
+
+    return row.map((value, i) => {
+      // 50%:  .25, .5, .75
+      // 100%: 0,   .5, 1
+      //let v = value * getHeight() + value * ((1 - getHeight()) / 2);
+      let v = (value - 0.5) * getHeight() + 0.5;
+      let pointOffsetY = rowHeight * (1 - v);
+      //pointOffsetY = pointOffsetY * getHeight() + pointOffsetY * (getHeight() / 2);
+
+      return {
+        x: i * stepX,
+        y: pointOffsetY + rowOffsetY
+      };
+    });
+  });
+}
+
+function pointsFromRowsEven(rows, canvasWidth, canvasHeight) {
+  // Height of first rowOffsetY, doubled
+  // 2 = 3 / 4
+  // 3 = 4 / 6
+  let rowHeight = 1 / (rows.length + 1) * 4 * canvasHeight;
+  console.log(rowHeight);
+
+  return rows.map((row, rowIndex) => {
+    const stepX = canvasWidth / (row.length - 1);
+
+    // 2 = 1 / 3, 2 / 3
+    // 3 = 1 / 4, 2 / 4, 3 / 4
+    let rowOffsetY = (rowIndex + 1) / (rows.length + 1) * canvasHeight;
+    if (rowIndex == 0) console.log(rowOffsetY);
+
+    return row.map((value, i) => {
+      let pointOffsetY = rowHeight * (1 - value) - (rowHeight / 2);
+
+      return {
+        x: i * stepX,
+        y: rowOffsetY + pointOffsetY
+      };
+    });
+  });
+}
+
+function parallax(lines, distance, strength) {
+  return lines.map((line, lineI) => {
+    let s = lineI / (lines.length - 1) * strength;
+    return line.map((point) => {
+      return {
+        x: point.x + distance + distance * s,
+        y: point.y
+      }
+    });
+  });
+}
+
+function parallaxPerspective(lines, camerax, canvasWidth) {
+  return lines.map((line, lineI) => {
+    //let 
+    let distance = 12 / ((lines.length - lineI) / 2 + 12) //* 0.02;
+    return line.map((point) => {
+      return {
+        x: (point.x - canvasWidth / 2 + camerax) * distance + canvasWidth / 2 ,
+        y: point.y
+      }
+    });
   });
 }
 
@@ -136,9 +270,9 @@ function makeLinearPath(ctx, row) {
   }
 }
 
-function closePath(ctx, width, height) {
-  ctx.lineTo(width, height);
-  ctx.lineTo(0, height);
+function closePath(line, ctx, width, height) {
+  ctx.lineTo(line[line.length - 1].x, height);
+  ctx.lineTo(line[0].x, height);
   ctx.closePath();
 }
 
@@ -206,10 +340,94 @@ function swap(list, firstIndex, secondIndex) {
 }
 
 
+/**
+ * Mergesort
+ */
+
+function *mergesortBU(list) {
+  let n = list.length;
+  for (let size = 1; size < n; size += size) {
+    for (let low = 0; low < n - size; low += size + size) {
+      yield* merge(list, low, low + size - 1, Math.min(low + size + size - 1, n - 1));
+    }
+  }
+}
+
+function *merge(list, low, mid, high) {
+  let i = low;
+  let j = mid + 1;
+  let aux = copyArray(list);
+
+  for (let k = low; k <= high; k++) {
+    if      (i > mid)         list[k] = aux[j++];
+    else if (j > high)        list[k] = aux[i++];
+    else if (aux[j] < aux[i]) list[k] = aux[j++];
+    else                      list[k] = aux[i++];
+
+    yield copyArray(list);
+  }
+}
+
+
+
+/*** Array functions ***/
+
+function copyArray(a) {
+  return a.slice();
+}
+
+function randomArray(len) {
+  let a = [];
+  for (let i = 0; i < len; i++) {
+    a.push(Math.random());
+  }
+  return a;
+}
+
+function resizeRandomArray(array, targetSize) {
+  if (targetSize < array.length) {
+    return array.slice(0, targetSize - 1);
+  }
+  
+  if (targetSize > array.length) {
+    return array.concat(randomArray(targetSize - array.length));
+  }
+
+  // No change
+  return copyArray(array);
+}
+
+function sortArray(array) {
+  let log = [];
+
+  if (getAlgo() === 'quicksort') {
+    // quicksort function reports original array first.
+    quicksort(copyArray(array), (list) => log.push(list));
+  } else {
+    log = [copyArray(array), ...mergesortBU(copyArray(array))];
+  }
+
+  return log;
+}
 
 /**
- * Helpers
- */
+ * Given an array, return a new array containing at most max items evenly distributed across the original array
+*/
+function sample(array, max) {
+  if (max <= 0) return [];
+  if (max >= array.length) return array;
+
+  let result = [];
+  for (let n = 0; n < max - 1; n++) {
+    let i = Math.round(n / max * array.length);
+    result.push(array[i]);
+  }
+
+  // Always include last result.
+  result.push(array[array.length - 1]);
+
+  return result;
+}
 
 function isSorted(list) {
   if (!Array.isArray(list)) throw new TypeError('First argument must be an array');
@@ -223,17 +441,11 @@ function isSorted(list) {
   return true;  
 }
 
-function randomArray(len) {
-  let a = [];
-  for (let i = 0; i < len; i++) {
-    a.push(Math.random());
-  }
-  return a;
-}
-
 // Exports for runnning tests
 if (typeof exports !== 'undefined') {
   exports.randomArray = randomArray;
   exports.isSorted = isSorted;
   exports.quicksort = quicksort;
+  exports.merge = merge;
+  exports.mergesortBU = mergesortBU;
 }
