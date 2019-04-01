@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/adunn/inli3u.github.io/demos/assorted-landscapes/build/precache-manifest.09f7f21d23462510ab66fa950e832741.js"
+  "/demos/assorted-landscapes/build/precache-manifest.1c6b85a5776c970cc5edf2ad0243a0b6.js"
 );
 
 workbox.clientsClaim();
@@ -28,7 +28,7 @@ self.__precacheManifest = [].concat(self.__precacheManifest || []);
 workbox.precaching.suppressWarnings();
 workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
 
-workbox.routing.registerNavigationRoute("/adunn/inli3u.github.io/demos/assorted-landscapes/build/index.html", {
+workbox.routing.registerNavigationRoute("/demos/assorted-landscapes/build/index.html", {
   
   blacklist: [/^\/_/,/\/[^\/]+\.[^\/]+$/],
 });
