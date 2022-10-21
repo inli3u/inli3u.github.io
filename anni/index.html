@@ -1,0 +1,48 @@
+<style type="text/css">
+html, body {
+    font-family: sans-serif;
+}
+
+#current-question {
+    margin-top: 5em;
+    /* margin-bottom: 10em; */
+    text-align: center;
+}
+
+#current-question .prompt {
+    margin:2em 10em;
+    font-size: 1.5em;
+}
+
+#controls {
+    margin-top: 2em;
+    text-align: center;
+}
+
+#toc {
+    margin-top: 40em;
+}
+#toc > * {
+    margin-top: 2em;
+}
+</style>
+
+<div id="controls">
+    <span class="position"></span>
+    <button id="btn-prev">Prev</button>
+    <button id="btn-next">Next</button>
+    <select id="filter-category"></select>
+    <button id="btn-shuffle">Shuffle</button>
+</div>
+
+<div id="current-question">
+    <div class="category">Category</div>
+    <div class="prompt">Prompt</div>
+</div>
+
+<div id="toc">
+
+</div>
+
+<script src="questions.js"></script>
+<script src="index.js"></script>
